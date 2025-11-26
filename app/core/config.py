@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     
     REDIS_HOST: str
     REDIS_PORT: int = 6379
-    BASE_URL: str = "http://localhost:8080"
+    BASE_URL: str = "http://localhost:8080" # CORRECTED PORT TO 8080
 
     class Config:
         env_file = ".env"

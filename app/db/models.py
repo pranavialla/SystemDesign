@@ -7,14 +7,16 @@ Base = declarative_base()
 class URLItem(Base):
     __tablename__ = "urls"
 
+    # Short Code: Must be unique and max 10 chars
     short_code = Column(String(10), primary_key=True, index=True)
     original_url = Column(String, index=True, nullable=False)
+    # Metadata
     created_at = Column(DateTime, default=datetime.utcnow)
     last_accessed_at = Column(DateTime, default=datetime.utcnow)
     click_count = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
 
-# NEW: Dynamic Configuration Table
+# For dynamic configs / maintenance mode
 class SystemConfig(Base):
     __tablename__ = "system_configs"
     
