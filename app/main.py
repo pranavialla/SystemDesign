@@ -1,6 +1,6 @@
 from app.db.Connection import database
-from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Request, status, Depends, HTTPException
+from fastapi.responses import JSONResponse, RedirectResponse
 import redis.exceptions
 import logging
 
@@ -8,6 +8,8 @@ from app.core.config import settings
 from app.db.Models import models  # ensure these import the same Base
 from app.api.endpoints import shortener, admin
 from app.core.logging_config import configure_logging # NEW IMPORT
+from app.services.shortener import URLService
+from sqlalchemy.orm import Session
 
 # Initialize logging before application starts
 logger = configure_logging()
@@ -53,7 +55,9 @@ async def rate_limit_middleware(request: Request, call_next):
         logger.warning(f"Failed to fetch/parse dynamic rate limit config. Using defaults: {limit} requests per {window} seconds.")
     # --- End Dynamic Config Fetch ---
 
-    client_ip = request.client.host
+    # Prefer X-Forwarded-For when behind a proxy/load-balancer
+    xff = request.headers.get("x-forwarded-for")
+    client_ip = xff.split(",")[0].strip() if xff else (request.client.host if request.client else "unknown")
     key = f"rate_limit:{client_ip}"
     
     try:
@@ -90,6 +94,45 @@ app.include_router(admin.router, prefix="/api/v1")
 @app.get("/", include_in_schema=False)
 def read_root():
     return {"message": "URL Shortener Service is operational. See /docs for API details."}
+
+
+@app.get("/{short_code}", include_in_schema=False)
+def root_redirect(short_code: str, db: Session = Depends(database.get_db)):
+    """Redirect root short codes (e.g. GET /abc123) to original URL using cache + DB.
+    This keeps redirect available at the root while API endpoints live under /api/v1.
+    """
+    # 1. Try cache
+    cached = None
+    try:
+        cached = database.redis_client.get(f"url:{short_code}")
+    except Exception:
+        logger.debug("Redis unavailable for redirect cache check.")
+
+    if cached:
+        try:
+            database.redis_client.incr(f"metrics:clicks:{short_code}")
+        except Exception:
+            logger.debug("Failed to increment Redis counter for cache hit.")
+        return RedirectResponse(url=cached, status_code=status.HTTP_302_FOUND)
+
+    # 2. DB lookup
+    db_url = URLService.get_url_stats(db, short_code)
+    if db_url is None or not getattr(db_url, "is_active", True):
+        raise HTTPException(status_code=404, detail="URL not found")
+
+    # 3. increment clicks (synchronously here)
+    try:
+        URLService.increment_click(db, db_url)
+    except Exception:
+        logger.exception("Failed to increment click count")
+
+    # 4. cache and redirect
+    try:
+        database.redis_client.setex(f"url:{short_code}", 86400, db_url.original_url)
+    except Exception:
+        logger.debug("Failed to set redirect cache in Redis.")
+
+    return RedirectResponse(url=db_url.original_url, status_code=status.HTTP_302_FOUND)
 
 
 # Global exception handler
