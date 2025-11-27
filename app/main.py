@@ -35,8 +35,10 @@ app = FastAPI(
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
     """Implement basic rate limiting per IP with dynamic configuration from Redis."""
-    # Skip rate limiting for health/readiness probes
+    # Skip rate limiting for health/readiness probes and admin endpoints
     if request.url.path in ["/health", "/ready", "/health/live", "/health/ready"]:
+        return await call_next(request)
+    if request.url.path.startswith("/admin") or request.url.path.startswith("/api/v1/admin"):
         return await call_next(request)
     
     # --- Dynamic Config Fetch ---
