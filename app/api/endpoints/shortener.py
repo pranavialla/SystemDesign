@@ -13,28 +13,11 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Helper to check dynamic configs
-def check_maintenance_mode(db: Session):
-    from app.db.models import SystemConfig # Import locally to avoid circular dependency
-    mode = database.redis_client.get("config:maintenance_mode")
-    # Check redis first, fallback to DB if not in cache (less common config)
-    if mode:
-        return mode.decode().lower() == "true"
-        
-    db_mode = db.query(SystemConfig).filter(SystemConfig.key == "maintenance_mode").first()
-    if db_mode and db_mode.value.lower() == "true":
-        return True
-    return False
-
 @router.post("/shorten", response_model=URLInfoResponse, status_code=status.HTTP_201_CREATED)
 def shorten_url_endpoint(url_request: URLCreateRequest, db: Session = Depends(database.get_db)):
     """
     Submit a long URL and receive a shortened version.
     """
-    if check_maintenance_mode(db):
-        logger.warning("Attempted shorten request during maintenance mode.")
-        raise HTTPException(status_code=503, detail="System is currently in maintenance mode.")
-
     try:
         # url_request.original_url is a Pydantic HttpUrl object
         db_url = URLService.create_short_url(
