@@ -83,8 +83,6 @@ async def rate_limit_middleware(request: Request, call_next):
 app.include_router(shortener.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
 
-# Include the shortener router again at the root for the redirect endpoint (/{short_code}) only.
-app.include_router(shortener.router) 
 
 @app.get("/", include_in_schema=False)
 def read_root():
