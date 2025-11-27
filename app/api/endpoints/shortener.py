@@ -48,7 +48,7 @@ def redirect_to_url_endpoint(short_code: str, db: Session = Depends(database.get
     cached_url = database.redis_client.get(f"url:{short_code}")
     if cached_url:
         logger.info(f"Redirect cache HIT for {short_code} -> {cached_url}")
-        URLService.increment_click(db, db_url)
+        URLService.increment_click(db, cached_url)
         return RedirectResponse(url=cached_url, status_code=status.HTTP_302_FOUND)
 
     # 2. Check Database
