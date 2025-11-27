@@ -64,7 +64,7 @@ def redirect_to_url_endpoint(short_code: str, request: Request, background_tasks
                 client_ip = xff.split(",")[0].strip()
             else:
                 client_ip = request.client.host if request.client else "unknown"
-            background_tasks.add_task(metrics.record_click, short_code, client_ip)
+                background_tasks.add_task(metrics.record_click, short_code)
             request.state.metrics_scheduled = True
 
         return RedirectResponse(url=cached_decoded, status_code=status.HTTP_302_FOUND)
@@ -82,7 +82,7 @@ def redirect_to_url_endpoint(short_code: str, request: Request, background_tasks
             client_ip = xff.split(",")[0].strip()
         else:
             client_ip = request.client.host if request.client else "unknown"
-        background_tasks.add_task(metrics.record_click, short_code, client_ip)
+            background_tasks.add_task(metrics.record_click, short_code)
         request.state.metrics_scheduled = True
 
     # 4. Set Cache (TTL 24 hours = 86400 seconds)

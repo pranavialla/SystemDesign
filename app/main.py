@@ -115,12 +115,7 @@ def root_redirect(short_code: str, request: Request, background_tasks: Backgroun
         # Schedule background task to increment counters (Redis + DB) once
         try:
             if not getattr(request.state, "metrics_scheduled", False):
-                xff = request.headers.get("x-forwarded-for")
-                if xff:
-                    client_ip = xff.split(",")[0].strip()
-                else:
-                    client_ip = request.client.host if request.client else "unknown"
-                background_tasks.add_task(metrics.record_click, short_code, client_ip)
+                background_tasks.add_task(metrics.record_click, short_code)
                 request.state.metrics_scheduled = True
         except Exception:
             logger.debug("Failed to schedule background DB metric update for cache hit")
