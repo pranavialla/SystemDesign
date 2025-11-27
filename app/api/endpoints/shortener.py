@@ -5,8 +5,9 @@ from datetime import datetime
 import logging
 
 from app.core.config import settings
-from app.db import database
-from app.schemas.url import URLCreateRequest, URLInfoResponse
+from app.db.Connection import database
+from app.schemas.URLInfoResponse import URLInfoResponse
+from app.schemas.URLCreateRequest import URLCreateRequest 
 from app.services.shortener import URLService
 
 logger = logging.getLogger(__name__)
@@ -15,9 +16,6 @@ router = APIRouter()
 
 @router.post("/shorten", response_model=URLInfoResponse, status_code=status.HTTP_201_CREATED)
 def shorten_url_endpoint(url_request: URLCreateRequest, db: Session = Depends(database.get_db)):
-    """
-    Submit a long URL and receive a shortened version.
-    """
     try:
         # url_request.original_url is a Pydantic HttpUrl object
         db_url = URLService.create_short_url(
@@ -27,7 +25,6 @@ def shorten_url_endpoint(url_request: URLCreateRequest, db: Session = Depends(da
             url_request.custom_alias
         )
     except ValueError as e:
-        # FIX: Convert url_request.original_url to string before slicing for logging.
         original_url_str = str(url_request.original_url)
         logger.error(f"Failed to create short URL for {original_url_str[:50]}... due to: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -51,6 +48,7 @@ def redirect_to_url_endpoint(short_code: str, db: Session = Depends(database.get
     cached_url = database.redis_client.get(f"url:{short_code}")
     if cached_url:
         logger.info(f"Redirect cache HIT for {short_code} -> {cached_url}")
+        URLService.increment_click(db, db_url)
         return RedirectResponse(url=cached_url, status_code=status.HTTP_302_FOUND)
 
     # 2. Check Database
@@ -68,19 +66,4 @@ def redirect_to_url_endpoint(short_code: str, db: Session = Depends(database.get
 
     return RedirectResponse(url=db_url.original_url, status_code=status.HTTP_302_FOUND)
 
-@router.get("/stats/{short_code}", response_model=URLInfoResponse)
-def get_url_statistics_endpoint(short_code: str, db: Session = Depends(database.get_db)):
-    """Retrieve metadata for a short code."""
-    db_url = URLService.get_url_stats(db, short_code)
-    if db_url is None:
-        logger.warning(f"Stats 404: Short code not found: {short_code}")
-        raise HTTPException(status_code=404, detail="URL not found")
-        
-    return URLInfoResponse(
-        original_url=db_url.original_url,
-        short_code=db_url.short_code,
-        short_url=f"{settings.BASE_URL}/{db_url.short_code}",
-        created_at=db_url.created_at,
-        last_accessed_at=db_url.last_accessed_at,
-        click_count=db_url.click_count
-    )
+

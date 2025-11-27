@@ -1,10 +1,11 @@
+from app.db.Connection import database
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 import redis.exceptions
 import logging
 
 from app.core.config import settings
-from app.db import models, database
+from app.db.Models import models  # ensure these import the same Base
 from app.api.endpoints import shortener, admin
 from app.core.logging_config import configure_logging # NEW IMPORT
 

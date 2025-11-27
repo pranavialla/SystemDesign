@@ -1,7 +1,7 @@
 import hashlib
 import base64
 from sqlalchemy.orm import Session
-from app.db.models import URLItem
+from app.db.Models.models import URLItem
 from datetime import datetime
 from typing import Optional
 import logging

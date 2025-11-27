@@ -1,3 +1,5 @@
+from app.db.Connection import database
+from app.services.shortener import URLService
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -5,8 +7,10 @@ from datetime import datetime
 from typing import List
 import logging
 
-from app.db import database, models
-from app.schemas.url import URLInfoResponse, ConfigUpdate, PaginatedURLList
+from app.db.Models import models
+from app.schemas.URLInfoResponse import URLInfoResponse
+from app.schemas.ConfigUpdate import ConfigUpdate
+from app.schemas.PaginatedURLList import PaginatedURLList
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -81,3 +85,21 @@ def get_total_clicks(db: Session = Depends(database.get_db)):
     logger.info("Admin accessed total click analytics.")
     total_clicks = db.query(func.sum(models.URLItem.click_count)).scalar()
     return {"total_clicks": total_clicks if total_clicks else 0}
+
+
+@router.get("/stats/{short_code}", response_model=URLInfoResponse)
+def get_url_statistics_endpoint(short_code: str, db: Session = Depends(database.get_db)):
+    """Retrieve metadata for a short code."""
+    db_url = URLService.get_url_stats(db, short_code)
+    if db_url is None:
+        logger.warning(f"Stats 404: Short code not found: {short_code}")
+        raise HTTPException(status_code=404, detail="URL not found")
+        
+    return URLInfoResponse(
+        original_url=db_url.original_url,
+        short_code=db_url.short_code,
+        short_url=f"{settings.BASE_URL}/{db_url.short_code}",
+        created_at=db_url.created_at,
+        last_accessed_at=db_url.last_accessed_at,
+        click_count=db_url.click_count
+    )
