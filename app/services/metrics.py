@@ -1,28 +1,30 @@
 from app.db.Connection import database
-from app.db.Models import models
 from datetime import datetime
 import logging
+import time
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 
-def record_click(short_code: str):
-    """Synchronous helper used by background tasks: increment Redis metric and update DB counters."""
+def record_click(short_code: str, client_ip: Optional[str] = None):
+    """Record a click in Redis with idempotency using client IP and a short time window.
+
+    This creates a dedupe key per (short_code, client_ip, second) so repeated calls
+    within the same second from the same client won't double-count.
+    """
+    if client_ip is None:
+        client_ip = "unknown"
+
+    window = int(time.time())
+    dedupe_key = f"metrics:dedup:{short_code}:{client_ip}:{window}"
     try:
-        # Redis metric increment (fast)
+        created = database.redis_client.set(dedupe_key, 1, nx=True, ex=2)
+        if not created:
+            logger.debug("metrics.record_click: duplicate within window skipped %s", dedupe_key)
+            return
+
+        logger.info("metrics.record_click: recording click for %s from %s", short_code, client_ip)
         database.redis_client.incr(f"metrics:clicks:{short_code}")
     except Exception:
-        logger.debug("Failed to increment Redis metric for %s", short_code)
-
-    # Update DB using a fresh session to avoid touching request session
-    db = database.SessionLocal()
-    try:
-        db.query(models.URLItem).filter(models.URLItem.short_code == short_code).update({
-            models.URLItem.click_count: models.URLItem.click_count + 1,
-            models.URLItem.last_accessed_at: datetime.utcnow()
-        })
-        db.commit()
-    except Exception:
-        logger.exception("Failed to update DB counters for %s", short_code)
-    finally:
-        db.close()
+        logger.exception("metrics.record_click failed for %s from %s", short_code, client_ip)

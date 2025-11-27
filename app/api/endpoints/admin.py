@@ -94,12 +94,20 @@ def get_url_statistics_endpoint(short_code: str, db: Session = Depends(database.
     if db_url is None:
         logger.warning(f"Stats 404: Short code not found: {short_code}")
         raise HTTPException(status_code=404, detail="URL not found")
-        
+    # Include any unflushed click counts stored in Redis to give near-real-time metrics
+    try:
+        redis_count = database.redis_client.get(f"metrics:clicks:{short_code}")
+        redis_count = int(redis_count) if redis_count else 0
+    except Exception:
+        redis_count = 0
+
+    total_clicks = (db_url.click_count or 0) + redis_count
+
     return URLInfoResponse(
         original_url=db_url.original_url,
         short_code=db_url.short_code,
         short_url=f"{settings.BASE_URL}/{db_url.short_code}",
         created_at=db_url.created_at,
         last_accessed_at=db_url.last_accessed_at,
-        click_count=db_url.click_count
+        click_count=total_clicks
     )

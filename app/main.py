@@ -1,5 +1,5 @@
 from app.db.Connection import database
-from fastapi import FastAPI, Request, status, Depends, HTTPException
+from fastapi import FastAPI, Request, status, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse, RedirectResponse
 import redis.exceptions
 import logging
@@ -9,6 +9,7 @@ from app.db.Models import models  # ensure these import the same Base
 from app.api.endpoints import shortener, admin
 from app.core.logging_config import configure_logging # NEW IMPORT
 from app.services.shortener import URLService
+from app.services import metrics
 from sqlalchemy.orm import Session
 
 # Initialize logging before application starts
@@ -99,7 +100,7 @@ def read_root():
 
 
 @app.get("/{short_code}", include_in_schema=False)
-def root_redirect(short_code: str, db: Session = Depends(database.get_db)):
+def root_redirect(short_code: str, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(database.get_db)):
     """Redirect root short codes (e.g. GET /abc123) to original URL using cache + DB.
     This keeps redirect available at the root while API endpoints live under /api/v1.
     """
@@ -111,10 +112,19 @@ def root_redirect(short_code: str, db: Session = Depends(database.get_db)):
         logger.debug("Redis unavailable for redirect cache check.")
 
     if cached:
+        # Schedule background task to increment counters (Redis + DB) once
         try:
-            database.redis_client.incr(f"metrics:clicks:{short_code}")
+            if not getattr(request.state, "metrics_scheduled", False):
+                xff = request.headers.get("x-forwarded-for")
+                if xff:
+                    client_ip = xff.split(",")[0].strip()
+                else:
+                    client_ip = request.client.host if request.client else "unknown"
+                background_tasks.add_task(metrics.record_click, short_code, client_ip)
+                request.state.metrics_scheduled = True
         except Exception:
-            logger.debug("Failed to increment Redis counter for cache hit.")
+            logger.debug("Failed to schedule background DB metric update for cache hit")
+
         return RedirectResponse(url=cached, status_code=status.HTTP_302_FOUND)
 
     # 2. DB lookup
@@ -122,11 +132,11 @@ def root_redirect(short_code: str, db: Session = Depends(database.get_db)):
     if db_url is None or not getattr(db_url, "is_active", True):
         raise HTTPException(status_code=404, detail="URL not found")
 
-    # 3. increment clicks (synchronously here)
+    # 3. increment clicks asynchronously to keep redirect latency low
     try:
-        URLService.increment_click(db, db_url)
+        background_tasks.add_task(metrics.record_click, short_code)
     except Exception:
-        logger.exception("Failed to increment click count")
+        logger.debug("Failed to schedule background DB metric update for DB hit")
 
     # 4. cache and redirect
     try:

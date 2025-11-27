@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -42,7 +42,7 @@ def shorten_url_endpoint(url_request: URLCreateRequest, db: Session = Depends(da
     )
 
 @router.get("/{short_code}", tags=["redirect"])
-def redirect_to_url_endpoint(short_code: str, background_tasks: BackgroundTasks, db: Session = Depends(database.get_db)):
+def redirect_to_url_endpoint(short_code: str, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(database.get_db)):
     """
     Access the shortened URL and get redirected to the original long URL.
     """
@@ -56,14 +56,16 @@ def redirect_to_url_endpoint(short_code: str, background_tasks: BackgroundTasks,
             cached_decoded = str(cached_url)
 
         logger.info(f"Redirect cache HIT for {short_code} -> {cached_decoded}")
-        # Increment Redis counter for cache-hit to avoid DB writes on hot paths
-        try:
-            database.redis_client.incr(f"metrics:clicks:{short_code}")
-        except Exception:
-            logger.debug("Failed to increment Redis metrics for cache hit")
 
-        # Schedule DB metric update in background to keep redirect fast
-        background_tasks.add_task(metrics.record_click, short_code)
+        # Schedule DB + Redis metric update in background to keep redirect fast
+        if not getattr(request.state, "metrics_scheduled", False):
+            xff = request.headers.get("x-forwarded-for")
+            if xff:
+                client_ip = xff.split(",")[0].strip()
+            else:
+                client_ip = request.client.host if request.client else "unknown"
+            background_tasks.add_task(metrics.record_click, short_code, client_ip)
+            request.state.metrics_scheduled = True
 
         return RedirectResponse(url=cached_decoded, status_code=status.HTTP_302_FOUND)
 
@@ -74,7 +76,14 @@ def redirect_to_url_endpoint(short_code: str, background_tasks: BackgroundTasks,
         raise HTTPException(status_code=404, detail="URL not found")
 
     # 3. Update Stats asynchronously to keep redirect latency low
-    background_tasks.add_task(metrics.record_click, short_code)
+    if not getattr(request.state, "metrics_scheduled", False):
+        xff = request.headers.get("x-forwarded-for")
+        if xff:
+            client_ip = xff.split(",")[0].strip()
+        else:
+            client_ip = request.client.host if request.client else "unknown"
+        background_tasks.add_task(metrics.record_click, short_code, client_ip)
+        request.state.metrics_scheduled = True
 
     # 4. Set Cache (TTL 24 hours = 86400 seconds)
     database.redis_client.setex(f"url:{short_code}", 86400, db_url.original_url)
