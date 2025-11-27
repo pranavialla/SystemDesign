@@ -12,8 +12,5 @@ class URLInfoResponse(BaseModel):
     last_accessed_at: datetime
     click_count: int
 
-    class Config:
-        from_attributes = True
-        # CRITICAL FIX for Pydantic V2: Allows instantiation using the Python field name 'original_url'
-        # even though it has an alias 'url'.
-        populate_by_name = True 
+    # Pydantic v2 configuration
+    model_config = {"from_attributes": True, "populate_by_name": True}

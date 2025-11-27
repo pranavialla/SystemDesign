@@ -33,6 +33,9 @@ app = FastAPI(
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
     """Implement basic rate limiting per IP with dynamic configuration from Redis."""
+    # Skip rate limiting for health/readiness probes
+    if request.url.path in ["/health", "/ready", "/health/live", "/health/ready"]:
+        return await call_next(request)
     
     # --- Dynamic Config Fetch ---
     limit = RATE_LIMIT_DEFAULT_LIMIT
@@ -87,3 +90,29 @@ app.include_router(admin.router, prefix="/api/v1")
 @app.get("/", include_in_schema=False)
 def read_root():
     return {"message": "URL Shortener Service is operational. See /docs for API details."}
+
+
+# Global exception handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
+
+# Graceful shutdown handlers
+import signal, sys
+
+def _shutdown(signum, frame):
+    logger.info("Shutting down gracefully...")
+    try:
+        database.engine.dispose()
+    except Exception:
+        logger.debug("Error disposing DB engine")
+    try:
+        database.redis_client.close()
+    except Exception:
+        logger.debug("Error closing Redis client")
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, _shutdown)
+signal.signal(signal.SIGINT, _shutdown)
