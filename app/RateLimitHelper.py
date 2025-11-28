@@ -26,7 +26,6 @@ def get_rate_limit_config(database):
 
 
 def get_client_ip(request: Request) -> str:
-    """Extract client IP from headers or request object."""
     xff = request.headers.get("x-forwarded-for")
     if xff:
         return xff.split(",")[0].strip()
@@ -34,12 +33,10 @@ def get_client_ip(request: Request) -> str:
 
 
 def is_admin_path(path: str) -> bool:
-    """Check if request path should bypass rate limiting."""
     return path.startswith("/admin") or path.startswith("/api/v1/admin")
 
 
 def check_rate_limit(database, key: str, limit: int, window: int):
-    """Check and update rate limit counter in Redis."""
     try:
         database.redis_client.ping()
         current = database.redis_client.get(key)

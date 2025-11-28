@@ -2,11 +2,6 @@ import logging
 import sys
 
 def configure_logging():
-    """
-    Configures application logging for production use.
-    Logs to stdout with a structured, timestamped format.
-    """
-    # 1. Basic configuration for all loggers
     logging.basicConfig(
         level=logging.INFO,
         # Production-ready format: Timestamp | Level | Module Name | Function:Line | Message
@@ -26,5 +21,4 @@ def configure_logging():
     logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
     logging.getLogger("redis").setLevel(logging.WARNING)
 
-    # Return the root app logger
     return logging.getLogger("app")
