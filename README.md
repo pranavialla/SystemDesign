@@ -12,6 +12,8 @@ cd /{projectRoot}
 docker compose down -v
 # build and start the application stack
 docker compose up --build
+
+docker compose down -v && docker compose up --build tests
 ```
 
 Notes

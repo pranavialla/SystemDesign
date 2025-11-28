@@ -1,5 +1,4 @@
 version: '3.8'
-
 services:
   web:
     build: .
@@ -38,7 +37,7 @@ services:
 
   tests:
     build: .
-    command: pytest -v
+    command: sh -c "cd /app && python -m pytest -v app/tests/"
     depends_on:
       - web
       - db

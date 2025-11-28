@@ -26,7 +26,7 @@ app = FastAPI(
     description="Production-ready URL Shortener Service"
 )
 
-app.include_router(shortener.router, prefix="")
+app.include_router(shortener.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
 
 @app.get("/health", tags=["health"])

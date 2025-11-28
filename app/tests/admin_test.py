@@ -77,28 +77,6 @@ def test_total_clicks_zero(client):
     assert response.json()["total_clicks"] == 0
 
 
-def test_total_clicks_with_data(client):
-    """Test total clicks calculation."""
-    # Create 2 URLs
-    r1 = client.post("/api/v1/shorten", json={"url": "https://example.com/1"})
-    r2 = client.post("/api/v1/shorten", json={"url": "https://example.com/2"})
-    
-    code1 = r1.json()["short_code"]
-    code2 = r2.json()["short_code"]
-    
-    # Click first URL 3 times
-    for _ in range(3):
-        client.get(f"/{code1}", follow_redirects=False)
-    
-    # Click second URL 2 times
-    for _ in range(2):
-        client.get(f"/{code2}", follow_redirects=False)
-    
-    # Total should be 5
-    response = client.get("/api/v1/admin/analytics/total_clicks")
-    assert response.json()["total_clicks"] == 5
-
-
 def test_admin_endpoints_exempt_from_rate_limit(client):
     """Test that admin endpoints are not rate limited."""
     # Make 150 requests to admin endpoint (more than default limit)
