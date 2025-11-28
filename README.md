@@ -44,7 +44,7 @@ Response (example)
 
 ```json
 {
-  "original_url": "https://example.com/long/path",
+  "url": "https://example.com/long/path",
   "short_code": "abc12345",
   "short_url": "http://localhost:8080/abc12345",
   "created_at": "2025-11-27T19:18:40.953574",

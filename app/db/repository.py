@@ -5,7 +5,7 @@ from datetime import datetime
 import logging
 
 from app.db.Models.models import URLItem
-from app.utils.encoding import encode_base62, generate_code_from_id
+from app.utils.encoding import encode_base62
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ def create_url(db: Session, short_code: Optional[str], original_url: str) -> URL
         except IntegrityError as e:
             db.rollback()
             logger.warning("IntegrityError creating URLItem short_code=%s original=%s: %s", short_code, original_url, str(e))
-            raise ValueError("Short code or original URL already exists")
+            raise ValueError("Short code already exists")
 
     # Otherwise, insert a row without a short_code to obtain a unique numeric id,
     # then generate a short_code from that id and update the record.

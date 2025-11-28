@@ -20,7 +20,7 @@ class URLService:
         # Only check uniqueness here; schema/length validated by Pydantic DTO
         if repository.get_url_by_short_code(db, custom_alias):
             logger.warning("Custom alias collision detected: '%s'.", custom_alias)
-            raise ValueError("Custom alias already in use.")
+            raise ValueError("Custom alias already exists")
         return custom_alias
 
     @staticmethod
@@ -28,9 +28,9 @@ class URLService:
         # Validate custom alias if provided
         alias = URLService._validate_custom_alias(db, custom_alias)
         if alias:
-            URLItem = repository.create_url(db, alias, original_url)
-            URLService.add_to_cache(alias, URLItem)
-            return URLItem
+            urlItem = repository.create_url(db, alias, original_url)
+            URLService.add_to_cache(alias, urlItem)
+            return urlItem
 
         # Idempotency: return existing mapping if present
         existing = repository.get_url_by_original(db, original_url)
@@ -39,9 +39,9 @@ class URLService:
             return existing
 
         # Let repository.create_url generate the short_code from DB id
-        URLItem = repository.create_url(db, alias, original_url)
-        URLService.add_to_cache(URLItem.short_code, URLItem)
-        return URLItem
+        urlItem = repository.create_url(db, alias, original_url)
+        URLService.add_to_cache(urlItem.short_code, urlItem)
+        return urlItem
 
     @staticmethod
     def get_url_stats(db: Session, short_code: str):
@@ -70,5 +70,6 @@ class URLService:
         # 4. Set Cache (TTL 24 hours = 86400 seconds)
         try:
             database.redis_client.setex(f"url:{short_code}", CACHE_TTL, db_url.original_url)
+            logger.debug(f"Cached {short_code} -> {db_url.original_url[:50]}")
         except redis.exceptions.ConnectionError:
             logger.warning(f"Failed to cache {short_code}, Redis unavailable")

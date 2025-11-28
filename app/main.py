@@ -29,9 +29,13 @@ app = FastAPI(
 app.include_router(shortener.router, prefix="")
 app.include_router(admin.router, prefix="/api/v1")
 
+@app.get("/health", tags=["health"])
+def health_check():
+    return {"status": "healthy", "service": "url-shortener"}
+
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
-    if is_admin_path(request.url.path):
+    if not is_admin_path(request.url.path):
         return await call_next(request)
 
     limit, window = get_rate_limit_config(database)
