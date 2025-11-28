@@ -17,7 +17,7 @@ the request-scoped session used by FastAPI endpoints.
 """
 
 from app.db.Connection import database
-from app.db.Models import models
+from app.db import repository
 from datetime import datetime
 import logging
 
@@ -25,18 +25,10 @@ logger = logging.getLogger(__name__)
 
 
 def record_click(short_code: str):
-        """Increment `click_count` and update `last_accessed_at` for the given short_code.
-
-        This is a small, synchronous function intended to be scheduled via
-        FastAPI's BackgroundTasks; it opens and closes its own DB session.
-        """
+        """Background task: increment click counter using repository helper."""
         db = database.SessionLocal()
         try:
-                updated = db.query(models.URLItem).filter(models.URLItem.short_code == short_code).update({
-                        models.URLItem.click_count: models.URLItem.click_count + 1,
-                        models.URLItem.last_accessed_at: datetime.utcnow()
-                })
-                db.commit()
+                updated = repository.increment_click(db, short_code)
                 if updated:
                         logger.info("metrics.record_click: DB counters updated for %s", short_code)
         except Exception:

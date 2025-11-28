@@ -16,9 +16,15 @@ class SystemConfig(Base):
 class URLItem(Base):
     __tablename__ = "urls"
 
-    # Short Code: Must be unique and max 10 chars
-    short_code = Column(String(10), primary_key=True, index=True)
-    original_url = Column(String, index=True, nullable=False)
+    # Numeric surrogate primary key to enable safe, collision-free short_code generation
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # Short Code: unique, max 10 chars. Allow nullable during initial insert so we
+    # can generate a code from the DB-assigned id.
+    short_code = Column(String(10), unique=True, index=True, nullable=True)
+
+    # Original URL: enforce uniqueness so repeated shorten requests are idempotent
+    original_url = Column(String, index=True, nullable=False, unique=True)
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow)
     last_accessed_at = Column(DateTime, default=datetime.utcnow)

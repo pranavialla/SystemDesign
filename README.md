@@ -8,7 +8,7 @@ Prerequisites
 - Docker Desktop (or Docker Engine + Docker Compose v2)
 - Git
 
-Quick start (clean)
+# Quick start (clean)
 
 ```bash
 # from repository root

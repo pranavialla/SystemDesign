@@ -19,37 +19,31 @@ router = APIRouter()
 @router.post("/shorten", response_model=URLInfoResponse, status_code=status.HTTP_201_CREATED)
 def shorten_url_endpoint(url_request: URLCreateRequest, db: Session = Depends(database.get_db)):
     try:
-        # url_request.original_url is a Pydantic HttpUrl object
-        db_url = URLService.create_short_url(
-            db, 
-            # Convert to string before passing to service
-            str(url_request.original_url), 
-            url_request.custom_alias
-        )
+        db_url = URLService.create_short_url(db, str(url_request.original_url),url_request.custom_alias,)
     except ValueError as e:
         original_url_str = str(url_request.original_url)
-        logger.error(f"Failed to create short URL for {original_url_str[:50]}... due to: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
-    
-    logger.info(f"API success: Shortened {db_url.original_url[:50]}... to {db_url.short_code}")
+        logger.error(
+            f"Failed to create short URL for {original_url_str[:50]}... due to: {str(e)}"
+        )
+        raise HTTPException(status_code=409, detail=str(e))
+
+    logger.info(
+        f"API success: Shortened {db_url.original_url[:50]}... to {db_url.short_code}"
+    )
     return URLInfoResponse(
         original_url=db_url.original_url,
         short_code=db_url.short_code,
-        short_url=f"{settings.BASE_URL}/{db_url.short_code}", # e.g., https://sho.rt/abc123
+        short_url=f"{settings.BASE_URL}/{db_url.short_code}",
         created_at=db_url.created_at,
         last_accessed_at=db_url.last_accessed_at,
-        click_count=db_url.click_count
+        click_count=db_url.click_count,
     )
 
 @router.get("/{short_code}", tags=["redirect"])
 def redirect_to_url_endpoint(short_code: str, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(database.get_db)):
-    """
-    Access the shortened URL and get redirected to the original long URL.
-    """
     # 1. Check Cache
     cached_url = database.redis_client.get(f"url:{short_code}")
     if cached_url:
-        # redis returns bytes; decode to str
         try:
             cached_decoded = cached_url.decode() if isinstance(cached_url, (bytes, bytearray)) else str(cached_url)
         except Exception:
@@ -57,7 +51,6 @@ def redirect_to_url_endpoint(short_code: str, request: Request, background_tasks
 
         logger.info(f"Redirect cache HIT for {short_code} -> {cached_decoded}")
 
-        # Schedule DB + Redis metric update in background to keep redirect fast
         if not getattr(request.state, "metrics_scheduled", False):
             xff = request.headers.get("x-forwarded-for")
             if xff:
