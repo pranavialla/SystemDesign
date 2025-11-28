@@ -88,9 +88,6 @@ def create_url(db: Session, short_code: Optional[str], original_url: str) -> URL
 
 
 def increment_click(db: Session, short_code: str) -> int:
-    """Increment click_count for the given short_code and update last_accessed_at.
-    Returns number of rows updated (0 or 1).
-    """
     updated = db.query(URLItem).filter(URLItem.short_code == short_code).update({
         URLItem.click_count: URLItem.click_count + 1,
         URLItem.last_accessed_at: datetime.utcnow()

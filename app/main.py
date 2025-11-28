@@ -93,55 +93,6 @@ async def rate_limit_middleware(request: Request, call_next):
 app.include_router(shortener.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
 
-
-@app.get("/", include_in_schema=False)
-def read_root():
-    return {"message": "URL Shortener Service is operational. See /docs for API details."}
-
-
-@app.get("/{short_code}", include_in_schema=False)
-def root_redirect(short_code: str, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(database.get_db)):
-    """Redirect root short codes (e.g. GET /abc123) to original URL using cache + DB.
-    This keeps redirect available at the root while API endpoints live under /api/v1.
-    """
-    # 1. Try cache
-    cached = None
-    try:
-        cached = database.redis_client.get(f"url:{short_code}")
-    except Exception:
-        logger.debug("Redis unavailable for redirect cache check.")
-
-    if cached:
-        # Schedule background task to increment counters (Redis + DB) once
-        try:
-            if not getattr(request.state, "metrics_scheduled", False):
-                background_tasks.add_task(metrics.record_click, short_code)
-                request.state.metrics_scheduled = True
-        except Exception:
-            logger.debug("Failed to schedule background DB metric update for cache hit")
-
-        return RedirectResponse(url=cached, status_code=status.HTTP_302_FOUND)
-
-    # 2. DB lookup
-    db_url = URLService.get_url_stats(db, short_code)
-    if db_url is None or not getattr(db_url, "is_active", True):
-        raise HTTPException(status_code=404, detail="URL not found")
-
-    # 3. increment clicks asynchronously to keep redirect latency low
-    try:
-        background_tasks.add_task(metrics.record_click, short_code)
-    except Exception:
-        logger.debug("Failed to schedule background DB metric update for DB hit")
-
-    # 4. cache and redirect
-    try:
-        database.redis_client.setex(f"url:{short_code}", 86400, db_url.original_url)
-    except Exception:
-        logger.debug("Failed to set redirect cache in Redis.")
-
-    return RedirectResponse(url=db_url.original_url, status_code=status.HTTP_302_FOUND)
-
-
 # Global exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
