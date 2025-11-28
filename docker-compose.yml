@@ -36,5 +36,21 @@ services:
     ports:
       - "6379:6379"
 
+  tests:
+    build: .
+    command: pytest -v
+    depends_on:
+      - web
+      - db
+      - redis
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_SERVER: db
+      POSTGRES_DB: shortener_db
+      REDIS_HOST: redis
+      BASE_URL: http://localhost:8080
+
+
 volumes:
   postgres_data:
