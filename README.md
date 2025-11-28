@@ -56,22 +56,22 @@ High level components:
 
 
 ## 4) Shortening logic
-    DB Increment + Base62 Encoding Works Well
+DB Increment + Base62 Encoding
 
-    why && Trade off
-    - Collision-free:
-        Each row in the DB gets a unique auto‑increment ID.
-        Encoding that ID guarantees uniqueness without extra checks.
-        won't increase latency on network calls for repeated collision check when we have huge number of URL's
+why && Trade off
+- Collision-free:
+    Each row in the DB gets a unique auto‑increment ID.
+    Encoding that ID guarantees uniqueness without extra checks.
+    won't increase latency on network calls for repeated collision check when we have huge number of URL's
 
-    - Short length guaranteed:
-        Base62 encoding compresses numeric IDs into alphanumeric strings.
-        Even billions of IDs stay under 10 characters.
+- Short length guaranteed:
+    Base62 encoding compresses numeric IDs into alphanumeric strings.
+    Even billions of IDs stay under 10 characters.
 
-    - Low latency:
-        No need to check for collisions in Redis/DB.
-        Just encode the ID and return the short code.
+- Low latency:
+    No need to check for collisions in Redis/DB.
+    Just encode the ID and return the short code.
 
-    - Predictable but safe:
-        Yes, codes are sequential/predictable, but that’s not a security issue u\
-        For most URL shorteners, predictability is acceptable
+- Predictable but safe:
+    Yes, codes are sequential/predictable, but that’s not a security issue u\
+    For most URL shorteners, predictability is acceptable
