@@ -52,26 +52,26 @@ High level components:
     so, we're choosing fail open over fail close
 
 ## 3) Rate limiting
-- Basic IP-based rate limiting is implemented using Redis. Admin and health endpoints are exempt from rate limiting. used fixed window rate limiting for simplicity and to cocentrate more on URL shorting.
+    - Basic IP-based rate limiting is implemented using Redis. Admin and health endpoints are exempt from rate limiting. used fixed window rate limiting for simplicity and to cocentrate more on URL shorting.
 
 
 ## 4) Shortening logic
     DB Increment + Base62 Encoding Works Well
 
-    ### why && Trade off
-    **Collision-free:**
+    why && Trade off
+    - Collision-free:
         Each row in the DB gets a unique auto‑increment ID.
         Encoding that ID guarantees uniqueness without extra checks.
         won't increase latency on network calls for repeated collision check when we have huge number of URL's
 
-    **Short length guaranteed:**
+    - Short length guaranteed:
         Base62 encoding compresses numeric IDs into alphanumeric strings.
         Even billions of IDs stay under 10 characters.
 
-    **Low latency:**
+    - Low latency:
         No need to check for collisions in Redis/DB.
         Just encode the ID and return the short code.
 
-    **Predictable but safe:**
+    - Predictable but safe:
         Yes, codes are sequential/predictable, but that’s not a security issue u\
         For most URL shorteners, predictability is acceptable
