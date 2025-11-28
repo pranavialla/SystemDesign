@@ -1,6 +1,6 @@
 from urllib.request import Request
 from app.db.Connection import database
-from app.services import metrics
+from app.services.Helper import metrics
 from sqlalchemy.orm import Session
 from app.db.Models.models import URLItem
 from app.db import repository

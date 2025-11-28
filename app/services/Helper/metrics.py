@@ -7,7 +7,6 @@ logger = logging.getLogger(__name__)
 
 
 def record_click(short_code: str):
-        """Background task: increment click counter using repository helper."""
         db = database.SessionLocal()
         try:
                 updated = repository.increment_click(db, short_code)

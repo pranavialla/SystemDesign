@@ -9,7 +9,7 @@ from app.db.Connection import database
 from app.schemas.URLInfoResponse import URLInfoResponse
 from app.schemas.URLCreateRequest import URLCreateRequest 
 from app.services.shortener import URLService
-from app.services import metrics
+from app.services.Helper import metrics
 from app.db.Models import models
 
 logger = logging.getLogger(__name__)

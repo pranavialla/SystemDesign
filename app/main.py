@@ -6,10 +6,10 @@ import logging
 
 from app.core.config import settings
 from app.db.Models import models  # ensure these import the same Base
-from app.api.endpoints import shortener, admin
+from app.api import shortener, admin
 from app.core.logging_config import configure_logging # NEW IMPORT
 from app.services.shortener import URLService
-from app.services import metrics
+from app.services.Helper import metrics
 from sqlalchemy.orm import Session
 
 # Initialize logging before application starts
