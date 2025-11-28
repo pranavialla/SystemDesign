@@ -28,9 +28,9 @@ class URLService:
         # Validate custom alias if provided
         alias = URLService._validate_custom_alias(db, custom_alias)
         if alias:
-            urlItem = repository.create_url(db, alias, original_url)
-            URLService.add_to_cache(alias, urlItem)
-            return urlItem
+            url_item = repository.create_url(db, alias, original_url)
+            URLService.add_to_cache(alias, url_item)
+            return url_item
 
         # Idempotency: return existing mapping if present
         existing = repository.get_url_by_original(db, original_url)
@@ -39,9 +39,9 @@ class URLService:
             return existing
 
         # Let repository.create_url generate the short_code from DB id
-        urlItem = repository.create_url(db, alias, original_url)
-        URLService.add_to_cache(urlItem.short_code, urlItem)
-        return urlItem
+        url_item = repository.create_url(db, alias, original_url)
+        URLService.add_to_cache(url_item.short_code, url_item)
+        return url_item
 
     @staticmethod
     def get_url_stats(db: Session, short_code: str):

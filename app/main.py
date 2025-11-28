@@ -35,7 +35,7 @@ def health_check():
 
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
-    if not is_admin_path(request.url.path):
+    if  is_admin_path(request.url.path) or request.url.path == "/health":
         return await call_next(request)
 
     limit, window = get_rate_limit_config(database)
