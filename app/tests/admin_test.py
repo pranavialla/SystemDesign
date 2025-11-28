@@ -69,17 +69,3 @@ def test_list_urls_pagination(client):
     assert len(data["urls"]) == 2
     assert data["skip"] == 2
 
-
-def test_total_clicks_zero(client):
-    """Test total clicks with no data."""
-    response = client.get("/api/v1/admin/analytics/total_clicks")
-    assert response.status_code == 200
-    assert response.json()["total_clicks"] == 0
-
-
-def test_admin_endpoints_exempt_from_rate_limit(client):
-    """Test that admin endpoints are not rate limited."""
-    # Make 150 requests to admin endpoint (more than default limit)
-    for _ in range(150):
-        response = client.get("/api/v1/admin/analytics/total_clicks")
-        assert response.status_code == 200

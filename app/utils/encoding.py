@@ -1,8 +1,3 @@
-"""Encoding utilities for generating compact short codes from integers.
-
-Provides base62 encode/decode and a small wrapper to produce codes of
-limited length (max 10)."""
-
 ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 BASE = len(ALPHABET)
 

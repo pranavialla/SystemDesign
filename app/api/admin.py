@@ -31,11 +31,6 @@ def list_urls_endpoint(
         urls=url_responses
     )
 
-@router.get("/analytics/total_clicks", response_model=dict)
-def get_total_clicks(db: Session = Depends(database.get_db)):
-    total_clicks = db.query(func.sum(models.URLItem.click_count)).scalar()
-    return {"total_clicks": total_clicks if total_clicks else 0}
-
 @router.get("/stats/{short_code}", response_model=URLInfoResponse)
 def get_url_statistics_endpoint(short_code: str, db: Session = Depends(database.get_db)):
     db_url = URLService.get_url_stats(db, short_code)
@@ -50,7 +45,6 @@ def get_url_statistics_endpoint(short_code: str, db: Session = Depends(database.
         last_accessed_at=db_url.last_accessed_at,
         click_count=db_url.click_count
     )
-
 
 @router.post("/config", response_model=ConfigUpdate)
 def set_dynamic_config_endpoint(config: ConfigUpdate, db: Session = Depends(database.get_db)):
