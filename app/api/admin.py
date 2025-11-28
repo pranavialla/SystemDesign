@@ -21,9 +21,10 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 @router.get("/list", response_model=PaginatedURLList)
 def list_urls_endpoint(
     skip: int = Query(0, ge=0), 
-    limit: int = Query(100, ge=1, le=1000)
+    limit: int = Query(100, ge=1, le=1000),
+    db: Session = Depends(database.get_db)
 ):
-    total, url_responses = URL.get_all(skip, limit)
+    total, url_responses = URL.get_all(skip, limit, db)
     return PaginatedURLList(
         total=total,
         skip=skip,
@@ -53,9 +54,9 @@ def get_url_statistics_endpoint(short_code: str, db: Session = Depends(database.
 
 
 @router.post("/config", response_model=ConfigUpdate)
-def set_dynamic_config_endpoint(config: ConfigUpdate):
-    ConfigService.save_to_db(config) 
-    ConfigService.save_to_redis(config)
+def set_dynamic_config_endpoint(config: ConfigUpdate, db: Session = Depends(database.get_db)):
+    ConfigService.save_to_db(config, db) 
+    ConfigService.save_to_redis(config, db)
     logger.info(f"Admin config updated: {config.key} = {config.value}")
     return config
 

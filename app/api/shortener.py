@@ -41,13 +41,11 @@ def shorten_url_endpoint(url_request: URLCreateRequest, db: Session = Depends(da
 
 @router.get("/{short_code}", tags=["redirect"])
 def redirect_to_url_endpoint(short_code: str, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(database.get_db)):
-    # 1. Check Cache
     cached_url = URLService.check_in_cache(short_code, request)
     if cached_url:
         metrics.update_stat(request ,background_tasks, metrics, short_code)
         return RedirectResponse(url=cached_url, status_code=status.HTTP_302_FOUND)
    
-    # 2. Check Database
     db_url = URLService.get_url_by_short_code(db, short_code)
     if db_url is None:
         logger.warning(f"Redirect 404: Short code not found: {short_code}")

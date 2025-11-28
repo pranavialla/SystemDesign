@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 
 class ConfigService:
-    def save_to_db(config: ConfigUpdate, db: Session = Depends(database.get_db)):
+    def save_to_db(config: ConfigUpdate, db: Session):
         db_config = db.query(models.SystemConfig).filter(models.SystemConfig.key == config.key).first()
         if not db_config:
             db_config = models.SystemConfig(key=config.key, value=config.value, description=config.description)
@@ -20,5 +20,5 @@ class ConfigService:
         db.commit()
         db.refresh(db_config)
 
-    def save_to_redis(config: ConfigUpdate):
+    def save_to_redis(config: ConfigUpdate, db: Session):
         database.redis_client.set(f"config:{config.key}", config.value)

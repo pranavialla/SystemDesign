@@ -2,8 +2,6 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "URL Shortener"
-    
-    # Infrastructure Configs (Env Vars - Required to start app)
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_SERVER: str
@@ -12,7 +10,7 @@ class Settings(BaseSettings):
     
     REDIS_HOST: str
     REDIS_PORT: int = 6379
-    BASE_URL: str = "http://localhost:8080" # CORRECTED PORT TO 8080
+    BASE_URL: str = "http://localhost:8080"
 
     class Config:
         env_file = ".env"
