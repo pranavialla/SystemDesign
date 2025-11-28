@@ -10,7 +10,7 @@ from app.db.Models import models
 from app.api import shortener, admin
 from app.core.logging_config import configure_logging 
 from app.services.shortener import URLService
-from app.services.Helper import metrics
+from app.services import metrics
 from sqlalchemy.orm import Session
 from app.RateLimitHelper import *
 

@@ -25,6 +25,6 @@ class URLItem(Base):
 
     last_accessed_at = Column(DateTime, default=datetime.utcnow)
 
-    click_count = Column(Integer, default=0)
+    click_count = Column(Integer, default=0, index=True)
 
     is_active = Column(Boolean, default=True)

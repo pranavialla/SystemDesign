@@ -1,14 +1,15 @@
 from urllib.request import Request
 from app.db.Connection import database
-from app.services.Helper import metrics
+from app.services import metrics
 from sqlalchemy.orm import Session
 from app.db.Models.models import URLItem
 from app.db import repository
 from typing import Optional
 import logging
+import redis.exceptions
 
 logger = logging.getLogger(__name__)
-
+CACHE_TTL = 86400
 
 class URLService:
 
@@ -27,7 +28,9 @@ class URLService:
         # Validate custom alias if provided
         alias = URLService._validate_custom_alias(db, custom_alias)
         if alias:
-            return repository.create_url(db, alias, original_url)
+            URLItem = repository.create_url(db, alias, original_url)
+            URLService.add_to_cache(alias, URLItem)
+            return URLItem
 
         # Idempotency: return existing mapping if present
         existing = repository.get_url_by_original(db, original_url)
@@ -36,7 +39,9 @@ class URLService:
             return existing
 
         # Let repository.create_url generate the short_code from DB id
-        return repository.create_url(db, alias, original_url)
+        URLItem = repository.create_url(db, alias, original_url)
+        URLService.add_to_cache(URLItem.short_code, URLItem)
+        return URLItem
 
     @staticmethod
     def get_url_stats(db: Session, short_code: str):
@@ -61,7 +66,9 @@ class URLService:
             return cached_decoded
         
     @staticmethod
-    def add_to_cache(short_code: str, db_url):
+    def add_to_cache(short_code: str, db_url: URLItem ):
         # 4. Set Cache (TTL 24 hours = 86400 seconds)
-        database.redis_client.setex(f"url:{short_code}", 86400, db_url.original_url)
-        logger.info(f"Redirect cache MISS/DB HIT for {short_code} -> {db_url.original_url[:50]}...")
+        try:
+            database.redis_client.setex(f"url:{short_code}", CACHE_TTL, db_url.original_url)
+        except redis.exceptions.ConnectionError:
+            logger.warning(f"Failed to cache {short_code}, Redis unavailable")

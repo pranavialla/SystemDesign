@@ -17,12 +17,12 @@ def record_click(short_code: str):
         finally:
                 db.close()
 
-def update_stat(request ,background_tasks, metrics, short_code):
+def update_stat(request ,background_tasks, short_code):
     if not getattr(request.state, "metrics_scheduled", False):
         xff = request.headers.get("x-forwarded-for")
         if xff:
             client_ip = xff.split(",")[0].strip()
         else:
             client_ip = request.client.host if request.client else "unknown"
-            background_tasks.add_task(metrics.record_click, short_code)
+            background_tasks.add_task(record_click, short_code)
         request.state.metrics_scheduled = True

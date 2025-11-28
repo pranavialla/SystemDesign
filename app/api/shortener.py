@@ -9,7 +9,7 @@ from app.db.Connection import database
 from app.schemas.URLInfoResponse import URLInfoResponse
 from app.schemas.URLCreateRequest import URLCreateRequest 
 from app.services.shortener import URLService
-from app.services.Helper import metrics
+from app.services import metrics
 from app.db.Models import models
 
 logger = logging.getLogger(__name__)
@@ -41,9 +41,10 @@ def shorten_url_endpoint(url_request: URLCreateRequest, db: Session = Depends(da
 
 @router.get("/{short_code}", tags=["redirect"])
 def redirect_to_url_endpoint(short_code: str, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(database.get_db)):
+    
     cached_url = URLService.check_in_cache(short_code, request)
     if cached_url:
-        metrics.update_stat(request ,background_tasks, metrics, short_code)
+        metrics.update_stat(request ,background_tasks, short_code)
         return RedirectResponse(url=cached_url, status_code=status.HTTP_302_FOUND)
    
     db_url = URLService.get_url_by_short_code(db, short_code)
@@ -51,7 +52,7 @@ def redirect_to_url_endpoint(short_code: str, request: Request, background_tasks
         logger.warning(f"Redirect 404: Short code not found: {short_code}")
         raise HTTPException(status_code=404, detail="URL not found")
 
-    metrics.update_stat(request ,background_tasks, metrics, short_code)
+    metrics.update_stat(request ,background_tasks, short_code)
     return RedirectResponse(url=db_url.original_url, status_code=status.HTTP_302_FOUND)
 
 

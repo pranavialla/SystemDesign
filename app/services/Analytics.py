@@ -1,3 +1,4 @@
+from typing import List
 from app.db.Connection import database
 from app.db.Models import models
 from app.schemas.URLInfoResponse import URLInfoResponse
@@ -6,7 +7,7 @@ from sqlalchemy import func
 from app.core.config import settings
 
 class URL:
-    def get_all(skip : int, limit: int,  db: Session):
+    def get_all(skip: int, limit: int, db: Session) -> tuple[int, List[URLInfoResponse]]:
         total = db.query(func.count(models.URLItem.short_code)).scalar()
         urls = db.query(models.URLItem).offset(skip).limit(limit).all()
         url_responses = [
