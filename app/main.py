@@ -26,12 +26,28 @@ app = FastAPI(
     description="URL Shortener Service"
 )
 
-app.include_router(shortener.router, prefix="")
-app.include_router(admin.router, prefix="")
-
 @app.get("/health", tags=["health"])
 def health_check():
-    return {"status": "healthy", "service": "url-shortener"}
+    health_status = {
+        "status": "healthy",
+        "service": "url-shortener",
+        "database": "healthy",
+        "redis" : "healthy"
+    }
+    is_db_healthy = database.verify_database_connection()
+    if not is_db_healthy:
+        health_status["database"] = "degraded"
+    
+    redis_healthy=  database.verify_redis_connection()
+    if not redis_healthy:
+        health_status["redis"] = "degraded"
+    
+    status_code = 200 if health_status["database"] == "healthy" else 503
+    return JSONResponse(content=health_status, status_code=status_code)
+
+
+app.include_router(shortener.router, prefix="")
+app.include_router(admin.router, prefix="")
 
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
@@ -69,6 +85,7 @@ def _shutdown(signum, frame):
     except Exception:
         logger.debug("Error closing Redis client")
     sys.exit(0)
+
 
 signal.signal(signal.SIGTERM, _shutdown)
 signal.signal(signal.SIGINT, _shutdown)
