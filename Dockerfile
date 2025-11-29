@@ -1,8 +1,8 @@
 # Stage 1: Builder
-FROM python:3.11-alpine as builder
+FROM python:3.11-alpine AS builder
 WORKDIR /app
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 # Install build dependencies for psycopg2
 RUN apk add --no-cache postgresql-dev gcc python3-dev musl-dev
 COPY requirements.txt .
