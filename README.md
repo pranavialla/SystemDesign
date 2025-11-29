@@ -5,11 +5,37 @@
 
 # Quick start (clean)
 
+
+### Running the URL Shortener Service using docker image
+
+1. **Pull the image**
+   ```bash
+   docker pull apranavi/url-shortener:latest
+
+2. **run**
+    ```bash 
+    docker run -d --name url-shortener -p 8000:8000 apranavi/url-shortener:latest
+
+2. **Stop the service**
+    ```bash 
+    docker stop url-shortener 
+
+3. **remove**
+    ```bash 
+    docker rm url-shortener
+
+
+
+# Steps to run if Source code pulled from GIT
 ```bash
 # from repository root
 cd /{projectRoot}
 # stop and remove existing containers and volumes (clean DB)
 docker compose down -v
+
+#to remove container but without volumes clean
+docker compose down
+
 # build and start the application stack
 docker compose up --build
 
