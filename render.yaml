@@ -1,5 +1,4 @@
 services:
-  # Main Web Service
   - type: web
     name: url-shortener
     runtime: docker
