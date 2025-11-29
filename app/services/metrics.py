@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 def record_click(short_code: str):
-        db = database.get_db()
+        db = database.SessionLocal()
         try:
                 updated = repository.increment_click(db, short_code)
                 if updated:
