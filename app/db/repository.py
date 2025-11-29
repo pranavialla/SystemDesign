@@ -18,41 +18,44 @@ def get_url_by_original(db: Session, original_url: str) -> Optional[URLItem]:
     return db.query(URLItem).filter(URLItem.original_url == original_url).first()
 
 
-def create_url(db: Session, short_code: Optional[str], original_url: str) -> URLItem:
-    # If caller provided a custom short_code, try direct insert and fail fast on conflict
-    if short_code is not None:
-        db_url = URLItem(short_code=short_code, original_url=original_url)
-        db.add(db_url)
-        try:
-            db.commit()
-            db.refresh(db_url)
-            return db_url
-        except IntegrityError as e:
-            db.rollback()
-            logger.warning("IntegrityError creating URLItem short_code=%s original=%s: %s", short_code, original_url, str(e))
-            raise ValueError("Short code already exists")
-
-    # Otherwise, insert a row without a short_code to obtain a unique numeric id,
-    # then generate a short_code from that id and update the record.
-    db_url = URLItem(short_code=None, original_url=original_url)
-    db.add(db_url)
+def _commit_and_refresh(db: Session, db_url: URLItem) -> URLItem:
     try:
+        db.add(db_url)
         db.commit()
         db.refresh(db_url)
+        return db_url
     except IntegrityError as e:
         db.rollback()
-        logger.warning("IntegrityError creating URLItem for original=%s: %s", original_url, str(e))
-        # If original_url already exists, return the existing row
+        logger.warning(
+            "IntegrityError creating URLItem short_code=%s original=%s: %s",
+            db_url.short_code, db_url.original_url, str(e)
+        )
+        raise
+
+def _create_with_custom_code(db: Session, short_code: str, original_url: str) -> URLItem:
+    db_url = URLItem(short_code=short_code, original_url=original_url)
+    try:
+        return _commit_and_refresh(db, db_url)
+    except IntegrityError:
+        raise ValueError("URL already exists")
+
+def _create_and_generate_code(db: Session, original_url: str) -> URLItem:
+    db_url = URLItem(short_code=None, original_url=original_url)
+    try:
+        _commit_and_refresh(db, db_url)
+    except IntegrityError as e:
         existing = get_url_by_original(db, original_url)
         if existing:
             return existing
         raise ValueError("Failed to create URLItem")
 
-    generated = encode_base62(db_url.id)
-    db_url.short_code = generated
-    db.commit()
-    db.refresh(db_url)
-    return db_url
+    db_url.short_code = encode_base62(db_url.id)
+    return _commit_and_refresh(db, db_url)
+
+def create_url(db: Session, short_code: Optional[str], original_url: str) -> URLItem:
+    if short_code:
+        return _create_with_custom_code(db, short_code, original_url)
+    return _create_and_generate_code(db, original_url)
 
 def increment_click(db: Session, short_code: str) -> int:
     updated = db.query(URLItem).filter(URLItem.short_code == short_code).update({

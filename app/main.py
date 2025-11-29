@@ -23,11 +23,11 @@ logger.info("Database models initialized/checked.")
 
 app = FastAPI(
     title=settings.PROJECT_NAME, 
-    description="Production-ready URL Shortener Service"
+    description="URL Shortener Service"
 )
 
-app.include_router(shortener.router, prefix="/api/v1")
-app.include_router(admin.router, prefix="/api/v1")
+app.include_router(shortener.router, prefix="")
+app.include_router(admin.router, prefix="")
 
 @app.get("/health", tags=["health"])
 def health_check():
@@ -46,6 +46,7 @@ async def rate_limit_middleware(request: Request, call_next):
     if allowed is False:
         return JSONResponse(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            #given max possible retry after 
             headers={"Retry-After": str(window)},
             content={"detail": f"Too many requests. Limit is {limit} per {window} seconds."}
         )

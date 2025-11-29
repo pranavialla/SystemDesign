@@ -9,23 +9,23 @@ from app.db.Connection import database
 from app.schemas.URLInfoResponse import URLInfoResponse
 from app.schemas.URLCreateRequest import URLCreateRequest 
 from app.services.shortener import URLService
-from app.services import metrics
+from app.services import RedisURLCache, metrics
 from app.db.Models import models
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-@router.post("/shorten", response_model=URLInfoResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/v1/shorten", response_model=URLInfoResponse, status_code=status.HTTP_201_CREATED)
 def shorten_url_endpoint(url_request: URLCreateRequest, db: Session = Depends(database.get_db)):
     try:
-        db_url = URLService.create_short_url(db, str(url_request.original_url),url_request.custom_alias,)
+        db_url = URLService.create_short_url(db, str(url_request.original_url),url_request.custom_alias)
     except ValueError as e:
         original_url_str = str(url_request.original_url)
         logger.error(
-            f"Failed to create short URL for {original_url_str[:50]}... due to: {str(e)}"
+            f"Failed to create short URL for {original_url_str[:50]}.. due to: {str(e)}"
         )
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=409, detail=str(e)) 
 
     logger.info(
         f"API success: Shortened {db_url.original_url[:50]}... to {db_url.short_code}"
@@ -41,8 +41,7 @@ def shorten_url_endpoint(url_request: URLCreateRequest, db: Session = Depends(da
 
 @router.get("/{short_code}", tags=["redirect"])
 def redirect_to_url_endpoint(short_code: str, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(database.get_db)):
-    
-    cached_url = URLService.check_in_cache(short_code, request)
+    cached_url = RedisURLCache.get(short_code, request)
     if cached_url:
         metrics.update_stat(request ,background_tasks, short_code)
         return RedirectResponse(url=cached_url, status_code=status.HTTP_302_FOUND)

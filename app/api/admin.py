@@ -17,7 +17,7 @@ from app.services.Analytics import URL
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-@router.get("/list", response_model=PaginatedURLList)
+@router.get("/v1/list", response_model=PaginatedURLList)
 def list_urls_endpoint(
     skip: int = Query(0, ge=0), 
     limit: int = Query(100, ge=1, le=1000),
@@ -31,7 +31,7 @@ def list_urls_endpoint(
         urls=url_responses
     )
 
-@router.get("/stats/{short_code}", response_model=URLInfoResponse)
+@router.get("/v1/stats/{short_code}", response_model=URLInfoResponse)
 def get_url_statistics_endpoint(short_code: str, db: Session = Depends(database.get_db)):
     db_url = URLService.get_url_stats(db, short_code)
     if db_url is None:
@@ -46,13 +46,13 @@ def get_url_statistics_endpoint(short_code: str, db: Session = Depends(database.
         click_count=db_url.click_count
     )
 
-@router.post("/config", response_model=ConfigUpdate)
+@router.post("/v1/config", response_model=ConfigUpdate)
 def set_dynamic_config_endpoint(config: ConfigUpdate, db: Session = Depends(database.get_db)):
     ConfigService.save_to_db(config, db) 
     ConfigService.save_to_redis(config, db)
     logger.info(f"Admin config updated: {config.key} = {config.value}")
     return config
 
-@router.get("/config")
+@router.get("/v1/config")
 def get_all_configs_endpoint(db: Session = Depends(database.get_db)):
     return db.query(models.SystemConfig).all()

@@ -6,15 +6,16 @@ from app.db.Models.models import URLItem
 from app.db import repository
 from typing import Optional
 import logging
-import redis.exceptions
+from app.services import RedisURLCache
+
 
 logger = logging.getLogger(__name__)
-CACHE_TTL = 86400
+
 
 class URLService:
 
     @staticmethod
-    def _validate_custom_alias(db: Session, custom_alias: Optional[str]):
+    def validate_custom_alias(db: Session, custom_alias: Optional[str]):
         if not custom_alias:
             return None
         # Only check uniqueness here; schema/length validated by Pydantic DTO
@@ -26,21 +27,21 @@ class URLService:
     @staticmethod
     def create_short_url(db: Session, original_url: str, custom_alias: Optional[str]) -> URLItem:
         # Validate custom alias if provided
-        alias = URLService._validate_custom_alias(db, custom_alias)
+        alias = URLService.validate_custom_alias(db, custom_alias)
         if alias:
             url_item = repository.create_url(db, alias, original_url)
-            URLService.add_to_cache(alias, url_item)
+            RedisURLCache.put(alias, url_item)
             return url_item
 
         # Idempotency: return existing mapping if present
         existing = repository.get_url_by_original(db, original_url)
         if existing:
-            logger.info("Idempotent request: Returned existing short code '%s' for URL: %s", existing.short_code, original_url[:50])
+            logger.info("short URL already existed : '%s' for URL: %s", existing.short_code, original_url[:50])
             return existing
 
         # Let repository.create_url generate the short_code from DB id
         url_item = repository.create_url(db, alias, original_url)
-        URLService.add_to_cache(url_item.short_code, url_item)
+        RedisURLCache.put(url_item.short_code, url_item)
         return url_item
 
     @staticmethod
@@ -50,26 +51,6 @@ class URLService:
     @staticmethod
     def get_url_by_short_code(db: Session, short_code: str):
         long_url = repository.get_url_by_short_code(db, short_code)
-        URLService.add_to_cache(short_code, long_url)
-        return long_url
-
-    @staticmethod
-    def check_in_cache(short_code: str, request: Request):
-        cached_url = database.redis_client.get(f"url:{short_code}")
-        if cached_url:
-            try:
-                cached_decoded = cached_url.decode() if isinstance(cached_url, (bytes, bytearray)) else str(cached_url)
-            except Exception:
-                cached_decoded = str(cached_url)
-
-            logger.info(f"Redirect cache HIT for {short_code} -> {cached_decoded}")
-            return cached_decoded
-        
-    @staticmethod
-    def add_to_cache(short_code: str, db_url: URLItem ):
-        # 4. Set Cache (TTL 24 hours = 86400 seconds)
-        try:
-            database.redis_client.setex(f"url:{short_code}", CACHE_TTL, db_url.original_url)
-            logger.debug(f"Cached {short_code} -> {db_url.original_url[:50]}")
-        except redis.exceptions.ConnectionError:
-            logger.warning(f"Failed to cache {short_code}, Redis unavailable")
+        if long_url:
+            RedisURLCache.put(short_code, long_url)
+            return long_url

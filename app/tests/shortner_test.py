@@ -3,7 +3,7 @@ import pytest
 def test_create_short_url_success(client):
     """Test successful URL shortening."""
     response = client.post(
-        "/api/v1/shorten",
+        "/v1/shorten",
         json={"url": "https://example.com/test"}
     )
     assert response.status_code == 201
@@ -19,12 +19,12 @@ def test_create_short_url_idempotent(client):
     url = "https://example.com/idempotent"
     
     # Create first time
-    response1 = client.post("/api/v1/shorten", json={"url": url})
+    response1 = client.post("/v1/shorten", json={"url": url})
     assert response1.status_code == 201
     code1 = response1.json()["short_code"]
     
     # Create second time with same URL
-    response2 = client.post("/api/v1/shorten", json={"url": url})
+    response2 = client.post("/v1/shorten", json={"url": url})
     assert response2.status_code == 201
     code2 = response2.json()["short_code"]
     
@@ -35,7 +35,7 @@ def test_create_short_url_idempotent(client):
 def test_create_short_url_with_custom_alias(client):
     """Test URL shortening with custom alias."""
     response = client.post(
-        "/api/v1/shorten",
+        "/v1/shorten",
         json={"url": "https://example.com/custom", "custom_alias": "mybrand"}
     )
     assert response.status_code == 201
@@ -47,13 +47,13 @@ def test_create_short_url_custom_alias_collision(client):
     """Test that duplicate custom alias returns error."""
     # Create first URL with custom alias
     client.post(
-        "/api/v1/shorten",
+        "/v1/shorten",
         json={"url": "https://example.com/first", "custom_alias": "taken"}
     )
     
     # Try to create second URL with same alias
     response = client.post(
-        "/api/v1/shorten",
+        "/v1/shorten",
         json={"url": "https://example.com/second", "custom_alias": "taken"}
     )
     assert response.status_code == 409
@@ -63,7 +63,7 @@ def test_create_short_url_custom_alias_collision(client):
 def test_create_short_url_custom_alias_too_long(client):
     """Test that custom alias longer than 10 chars is rejected."""
     response = client.post(
-        "/api/v1/shorten",
+        "/v1/shorten",
         json={"url": "https://example.com/test", "custom_alias": "this_is_too_long"}
     )
     assert response.status_code == 422  # Pydantic validation error
@@ -78,14 +78,14 @@ def test_create_short_url_invalid_url(client):
     ]
     
     for invalid_url in invalid_urls:
-        response = client.post("/api/v1/shorten", json={"url": invalid_url})
+        response = client.post("/v1/shorten", json={"url": invalid_url})
         assert response.status_code == 422, f"Should reject: {invalid_url}"
 
 
 def test_create_short_url_too_long(client):
     """Test that URL longer than 2048 chars is rejected."""
     long_url = "https://example.com/" + "a" * 2100
-    response = client.post("/api/v1/shorten", json={"url": long_url})
+    response = client.post("/v1/shorten", json={"url": long_url})
     assert response.status_code == 422
 
 
@@ -93,13 +93,13 @@ def test_redirect_success(client):
     """Test successful redirect."""
     # Create short URL
     create_response = client.post(
-        "/api/v1/shorten",
+        "/v1/shorten",
         json={"url": "https://example.com/redirect-test"}
     )
     short_code = create_response.json()["short_code"]
     
     # Test redirect
-    response = client.get(f"/api/v1/{short_code}", follow_redirects=False)
+    response = client.get(f"/{short_code}", follow_redirects=False)
     assert response.status_code == 302
     assert response.headers["location"] == "https://example.com/redirect-test"
 

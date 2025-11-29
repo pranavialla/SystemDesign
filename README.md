@@ -26,6 +26,9 @@ Notes
 - Swagger UI: http://localhost:8080/docs
 - Redoc: http://localhost:8080/redoc
 
+### postman collection API shared as it always have the update endpoints
+- postman collection: https://api.postman.com/collections/20719923-7c1c410c-2903-414a-93a3-23b30f8e12cc?access_key=PMAT-01KB7RKPEE972942FM7TDTFBS3
+
 ## Architectural overview
 
 High level components:
