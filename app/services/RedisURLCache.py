@@ -1,10 +1,10 @@
 from urllib.request import Request
-from venv import logger
+import logging
 import redis.exceptions
 from app.db.Connection import database
 from app.db.Models.models import URLItem
 
-
+logger = logging.getLogger(__name__)
 CACHE_TTL = 86400
 
 @staticmethod
