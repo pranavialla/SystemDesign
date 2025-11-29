@@ -1,0 +1,56 @@
+services:
+  # Main Web Service
+  - type: web
+    name: url-shortener
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: POSTGRES_USER
+        sync: false
+      - key: POSTGRES_PASSWORD
+        sync: false
+      - key: POSTGRES_SERVER
+        fromDatabase:
+          name: url-shortener-db
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: url-shortener-db
+          property: port
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: url-shortener-db
+          property: database
+      - key: REDIS_HOST
+        fromService:
+          name: url-shortener-redis
+          type: redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          name: url-shortener-redis
+          type: redis
+          property: port
+      - key: BASE_URL
+        value: https://url-shortener.onrender.com
+    autoDeploy: true
+
+  # Redis Service
+  - type: redis
+    name: url-shortener-redis
+    plan: free
+    region: oregon
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
+
+# PostgreSQL Database
+databases:
+  - name: url-shortener-db
+    plan: free
+    databaseName: shortener_db
+    user: user
+    region: oregon
