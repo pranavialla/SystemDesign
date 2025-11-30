@@ -158,9 +158,7 @@ With 18M URLs in 5 years, 10-character codes provide ~203,000,000× capacity buf
     - large shortcode space. so very less chance for collision
 
     #### con's
-    - Predictable (users can scrape data by guessing codes).
-    - Requires centralized coordination when we have multiple instances.
-    - it don't help us to avoid collision too as we support custom alias. if custom alias is not supported then this approch is collision free
+    -  confusion due to case sensitiveness. user not only need to remeber shortcode they need to remeber each character case
     
 
 #### implemented approch
