@@ -3,10 +3,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
 import logging
-from app.utils.encoding import encode_base62, generate_short_code, normalize_short_code
+from app.utils.encoding import  generate_short_code, normalize_short_code
 
 from app.db.Models.models import URLItem
-from app.utils.encoding import encode_base62
 
 logger = logging.getLogger(__name__)
 
