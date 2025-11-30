@@ -1,6 +1,7 @@
 from pydantic import BaseModel, HttpUrl, Field, field_validator
 from datetime import datetime
 from typing import Optional, List
+from app.utils.encoding import normalize_short_code, ALPHABET
 
 # Request DTOs
 class URLCreateRequest(BaseModel):
@@ -27,5 +28,4 @@ class URLCreateRequest(BaseModel):
         # Only allow http/https
         if not (url_str.startswith('http://') or url_str.startswith('https://')):
             raise ValueError('Only HTTP and HTTPS URLs are allowed')
-        
         return v
