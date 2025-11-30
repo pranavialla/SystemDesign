@@ -138,7 +138,7 @@ With 18M URLs in 5 years, 10-character codes provide ~203,000,000× capacity buf
 
 ## 6. Design Decisions & Trade-offs
 
-### Decision 1: Base62 Encoding from Auto-Increment IDs
+### Decision 1: Base32 Encoding from secret pacakage
 
 **Alternative Approaches**: 
 
