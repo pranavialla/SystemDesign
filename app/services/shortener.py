@@ -7,6 +7,7 @@ from app.db import repository
 from typing import Optional
 import logging
 from app.services import RedisURLCache
+from app.utils.encoding import normalize_short_code
 
 
 logger = logging.getLogger(__name__)
@@ -18,10 +19,12 @@ class URLService:
     def validate_custom_alias(db: Session, custom_alias: Optional[str]):
         if not custom_alias:
             return None
-        # Only check uniqueness here; schema/length validated by Pydantic DTO
-        if repository.get_url_by_short_code(db, custom_alias):
-            logger.warning("Custom alias collision detected: '%s'.", custom_alias)
+        # Check if normalized version exists (case-insensitive)
+        normalized = normalize_short_code(custom_alias)
+        if repository.get_url_by_short_code(db, normalized):
+            logger.warning(f"Custom alias collision (case-insensitive): '{custom_alias}' → '{normalized}'")
             raise ValueError("Custom alias already exists")
+        
         return custom_alias
 
     @staticmethod
