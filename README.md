@@ -23,9 +23,9 @@
 ## 1. Functional Requirements
 
 ### Core Capabilities
-- **URL Shortening**: Accept long URLs and return unique short codes (max 10 characters)
+- **URL Shortening**: Accept long URLs and return unique short URL (max 10 characters shortcode)
 - **URL Redirection**: Redirect users from short URLs to original destinations
-- **Idempotency**: Same original URL always returns the same short code
+- **Idempotency**: Same original URL always returns the same short URL
 - **Custom Aliases**: Support user-defined short codes
 - **Analytics**: Track click counts and last access timestamps
 - **Admin Operations**: 
